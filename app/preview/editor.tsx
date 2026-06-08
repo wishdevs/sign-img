@@ -72,10 +72,11 @@ function signatureRegions(emailId: string) {
   // 줄 수는 1x(21px·252폭) 기준으로 판정 — 이미지 내부 줄바꿈과 동일.
   const lines =
     measureWidth(emailFull, "400 21px 'Red Hat Display', sans-serif") > C_WIDTH_1X ? 2 : 1;
-  const L = C_LEFT_1X * SCALE;
-  const W = C_WIDTH_1X * SCALE;
-  const T = C_TOP_1X * SCALE;
-  const H = LINE_H_1X * SCALE;
+  // 이미지맵은 표시 크기와 좌표가 일치해야 동작 → 480×280 고정 표시 기준(1x).
+  const L = C_LEFT_1X;
+  const W = C_WIDTH_1X;
+  const T = C_TOP_1X;
+  const H = LINE_H_1X;
   const right = L + W;
   const phone = [L, T, right, T + H];
   const eTop = T + H;
@@ -136,7 +137,7 @@ export function Editor({ initial }: { initial: Card }) {
     mapName: string
   ): string {
     return [
-      `<img src="${absImg}" width="${WIDTH}" usemap="#${mapName}" border="0" style="display:block;border:0;width:100%;max-width:${WIDTH}px;height:auto" alt="ETRIBE 명함" />`,
+      `<img src="${absImg}" width="${WIDTH}" height="${HEIGHT}" usemap="#${mapName}" border="0" style="display:block;border:0" alt="ETRIBE 명함" />`,
       `<map name="${mapName}">`,
       `  <area shape="rect" coords="${regions.phone.join(",")}" href="${tel}" alt="전화" />`,
       `  <area shape="rect" coords="${regions.email.join(",")}" href="${mail}" alt="이메일" />`,
@@ -250,20 +251,15 @@ export function Editor({ initial }: { initial: Card }) {
           </button>
         </div>
 
-        {/* 실제 붙여넣어질 서명 요소(img + 이미지맵) — JSX로 렌더(자동 이스케이프), 영역 클릭 가능 */}
+        {/* 실제 붙여넣어질 서명 요소(img + 이미지맵) — JSX로 렌더(자동 이스케이프), 영역 클릭 가능.
+            이미지맵은 표시 크기와 좌표가 일치해야 동작하므로 480×280 고정. */}
         <img
           src={imgUrl}
-          width={WIDTH * SCALE}
-          height={HEIGHT * SCALE}
+          width={WIDTH}
+          height={HEIGHT}
           alt="ETRIBE 명함"
           useMap="#etribeSigPreview"
-          style={{
-            display: "block",
-            width: "100%",
-            maxWidth: WIDTH,
-            height: "auto",
-            outline: "1px solid #374151",
-          }}
+          style={{ display: "block", outline: "1px solid #374151" }}
         />
         <map name="etribeSigPreview">
           <area shape="rect" coords={cReg.phone.join(",")} href={cTelHref} alt="전화" />
