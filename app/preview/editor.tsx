@@ -128,39 +128,43 @@ export function Editor({ initial }: { initial: Card }) {
   const cMailHref = `mailto:${committed.emailId}${EMAIL_DOMAIN}`;
   const cReg = signatureRegions(committed.emailId);
 
-  function buildSigHtml(absImg: string): string {
+  function buildSigHtml(
+    absImg: string,
+    regions: ReturnType<typeof signatureRegions>,
+    tel: string,
+    mail: string,
+    mapName: string
+  ): string {
     return [
-      `<img src="${absImg}" width="${WIDTH}" usemap="#etribeSig" border="0" style="display:block;border:0;width:100%;max-width:${WIDTH}px;height:auto" alt="ETRIBE 명함" />`,
-      `<map name="etribeSig">`,
-      `  <area shape="rect" coords="${reg.phone.join(",")}" href="${telHref}" alt="전화" />`,
-      `  <area shape="rect" coords="${reg.email.join(",")}" href="${mailHref}" alt="이메일" />`,
-      `  <area shape="rect" coords="${reg.web.join(",")}" href="${webHref}" target="_blank" alt="홈페이지" />`,
+      `<img src="${absImg}" width="${WIDTH}" usemap="#${mapName}" border="0" style="display:block;border:0;width:100%;max-width:${WIDTH}px;height:auto" alt="ETRIBE 명함" />`,
+      `<map name="${mapName}">`,
+      `  <area shape="rect" coords="${regions.phone.join(",")}" href="${tel}" alt="전화" />`,
+      `  <area shape="rect" coords="${regions.email.join(",")}" href="${mail}" alt="이메일" />`,
+      `  <area shape="rect" coords="${regions.web.join(",")}" href="${webHref}" target="_blank" alt="홈페이지" />`,
       `</map>`,
     ].join("\n");
   }
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  // 복사/textarea용 — 라이브(현재 입력) 기준, 깔끔한 URL.
+  const liveSigHtml = buildSigHtml(origin + signUrl, reg, telHref, mailHref, "etribeSig");
+
   const [copied, setCopied] = useState(false);
   async function copySignature() {
-    const absImg =
-      (typeof window !== "undefined" ? window.location.origin : "") + signUrl;
-    const html = buildSigHtml(absImg);
     try {
       await navigator.clipboard.write([
         new ClipboardItem({
-          "text/html": new Blob([html], { type: "text/html" }),
-          "text/plain": new Blob([html], { type: "text/plain" }),
+          "text/html": new Blob([liveSigHtml], { type: "text/html" }),
+          "text/plain": new Blob([liveSigHtml], { type: "text/plain" }),
         }),
       ]);
     } catch {
-      await navigator.clipboard?.writeText(html);
+      await navigator.clipboard?.writeText(liveSigHtml);
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
-
-  const absSigHtml = buildSigHtml(
-    (typeof window !== "undefined" ? window.location.origin : "") + signUrl
-  );
 
   return (
     <div style={{ display: "flex", gap: 36, flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -246,13 +250,13 @@ export function Editor({ initial }: { initial: Card }) {
           </button>
         </div>
 
-        {/* 생성 이미지 + 이미지맵 (클릭 가능) */}
+        {/* 실제 붙여넣어질 서명 요소(img + 이미지맵) — JSX로 렌더(자동 이스케이프), 영역 클릭 가능 */}
         <img
           src={imgUrl}
           width={WIDTH * SCALE}
           height={HEIGHT * SCALE}
-          alt="명함 이미지"
-          useMap="#sigPreview"
+          alt="ETRIBE 명함"
+          useMap="#etribeSigPreview"
           style={{
             display: "block",
             width: "100%",
@@ -261,7 +265,7 @@ export function Editor({ initial }: { initial: Card }) {
             outline: "1px solid #374151",
           }}
         />
-        <map name="sigPreview">
+        <map name="etribeSigPreview">
           <area shape="rect" coords={cReg.phone.join(",")} href={cTelHref} alt="전화" />
           <area shape="rect" coords={cReg.email.join(",")} href={cMailHref} alt="이메일" />
           <area
@@ -273,6 +277,10 @@ export function Editor({ initial }: { initial: Card }) {
             alt="홈페이지"
           />
         </map>
+        <div style={{ fontSize: 11, color: "#6b7280" }}>
+          ↑ 실제 서명 요소(이미지맵 적용). 전화/이메일/홈페이지 영역을 클릭해보세요. (이미지·맵은
+          “갱신” 기준, 복사 HTML은 현재 입력 기준)
+        </div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button
@@ -290,7 +298,7 @@ export function Editor({ initial }: { initial: Card }) {
         {/* 복사될 서명 HTML 미리보기 */}
         <textarea
           readOnly
-          value={absSigHtml}
+          value={liveSigHtml}
           onFocus={(e) => e.currentTarget.select()}
           style={{
             ...inputStyle,

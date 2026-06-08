@@ -132,7 +132,7 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
             position: "absolute",
             top: 208,
             left: 0,
-            width: 480,
+            width: 481, // 마지막 E 우측 끝을 1px 더 오른쪽으로
             height: GLYPH_H,
             display: "flex",
             justifyContent: "space-between",
