@@ -12,7 +12,7 @@ function encodePayload(text: string): string {
 export default function Home() {
   const [text, setText] = useState("안녕하세요");
   const encoded = encodePayload(text);
-  const url = `/api/og?d=${encoded}`;
+  const url = `/sign?d=${encoded}`;
 
   return (
     <main style={{ maxWidth: 720, margin: "60px auto", padding: "0 20px" }}>
