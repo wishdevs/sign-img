@@ -102,6 +102,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+// 전화 → 국제번호 tel: 링크 (+82, 앞자리 0 제거).
+function toTelHref(phone: string): string {
+  const digits = phone.replace(/\D/g, "").replace(/^0/, "");
+  return `tel:+82${digits}`;
+}
+
 const rectStr = (r: Rect) => r.join(",");
 const sliceSrc = (dd: string, r: Rect, bust?: number) =>
   `/slice?d=${dd}&crop=${rectStr(r)}${bust ? `&t=${bust}` : ""}`;
@@ -132,9 +138,9 @@ export function Editor({ initial }: { initial: Card }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   // 링크 (라이브=복사용 / 커밋=렌더용)
-  const telHref = `tel:${card.phone.replace(/\D/g, "")}`;
+  const telHref = toTelHref(card.phone);
   const mailHref = `mailto:${emailId}${EMAIL_DOMAIN}`;
-  const cTelHref = `tel:${committed.phone.replace(/\D/g, "")}`;
+  const cTelHref = toTelHref(committed.phone);
   const cMailHref = `mailto:${committed.emailId}${EMAIL_DOMAIN}`;
 
   const liveLines = emailLineCount(emailId);
