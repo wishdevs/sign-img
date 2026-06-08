@@ -60,22 +60,28 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// 연락처 클릭영역(이미지맵) 계산 — 1x(480×280) 좌표.
-const C_LEFT = 208;
-const C_WIDTH = 252;
-const C_TOP = 52;
-const LINE_H = 28;
+// 연락처 클릭영역(이미지맵) — 이미지 intrinsic(960×560=2x) 좌표.
+// 이미지맵은 원본 기준이라, 이미지가 반응형으로 줄어도 영역이 함께 스케일된다.
+const C_LEFT_1X = 208;
+const C_WIDTH_1X = 252;
+const C_TOP_1X = 52;
+const LINE_H_1X = 28;
 
 function signatureRegions(emailId: string) {
   const emailFull = `${emailId}${EMAIL_DOMAIN}`;
-  const emailLines =
-    measureWidth(emailFull, "400 21px 'Red Hat Display', sans-serif") > C_WIDTH ? 2 : 1;
-  const right = C_LEFT + C_WIDTH;
-  const phone = [C_LEFT, C_TOP, right, C_TOP + LINE_H];
-  const emailTop = C_TOP + LINE_H;
-  const email = [C_LEFT, emailTop, right, emailTop + LINE_H * emailLines];
-  const webTop = emailTop + LINE_H * emailLines;
-  const web = [C_LEFT, webTop, right, webTop + LINE_H];
+  // 줄 수는 1x(21px·252폭) 기준으로 판정 — 이미지 내부 줄바꿈과 동일.
+  const lines =
+    measureWidth(emailFull, "400 21px 'Red Hat Display', sans-serif") > C_WIDTH_1X ? 2 : 1;
+  const L = C_LEFT_1X * SCALE;
+  const W = C_WIDTH_1X * SCALE;
+  const T = C_TOP_1X * SCALE;
+  const H = LINE_H_1X * SCALE;
+  const right = L + W;
+  const phone = [L, T, right, T + H];
+  const eTop = T + H;
+  const email = [L, eTop, right, eTop + H * lines];
+  const wTop = eTop + H * lines;
+  const web = [L, wTop, right, wTop + H];
   return { phone, email, web };
 }
 
@@ -124,7 +130,7 @@ export function Editor({ initial }: { initial: Card }) {
 
   function buildSigHtml(absImg: string): string {
     return [
-      `<img src="${absImg}" width="${WIDTH}" height="${HEIGHT}" usemap="#etribeSig" border="0" style="display:block;border:0" alt="ETRIBE 명함" />`,
+      `<img src="${absImg}" width="${WIDTH}" usemap="#etribeSig" border="0" style="display:block;border:0;width:100%;max-width:${WIDTH}px;height:auto" alt="ETRIBE 명함" />`,
       `<map name="etribeSig">`,
       `  <area shape="rect" coords="${reg.phone.join(",")}" href="${telHref}" alt="전화" />`,
       `  <area shape="rect" coords="${reg.email.join(",")}" href="${mailHref}" alt="이메일" />`,
@@ -243,11 +249,17 @@ export function Editor({ initial }: { initial: Card }) {
         {/* 생성 이미지 + 이미지맵 (클릭 가능) */}
         <img
           src={imgUrl}
-          width={WIDTH}
-          height={HEIGHT}
+          width={WIDTH * SCALE}
+          height={HEIGHT * SCALE}
           alt="명함 이미지"
           useMap="#sigPreview"
-          style={{ width: WIDTH, height: HEIGHT, outline: "1px solid #374151", display: "block" }}
+          style={{
+            display: "block",
+            width: "100%",
+            maxWidth: WIDTH,
+            height: "auto",
+            outline: "1px solid #374151",
+          }}
         />
         <map name="sigPreview">
           <area shape="rect" coords={cReg.phone.join(",")} href={cTelHref} alt="전화" />
