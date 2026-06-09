@@ -7,6 +7,7 @@ import {
   HEIGHT,
   SCALE,
   EMAIL_DOMAIN,
+  TEL,
   normalizePhone,
   type Card,
 } from "../card";
@@ -36,6 +37,11 @@ const C_LEFT = 208;
 const C_RIGHT_W = WIDTH - C_LEFT; // 272
 const LINE_H = 28;
 
+// 하단 검정 띠(주소/전화/팩스) 위치(1x) — card.tsx와 일치: bottom 26, height 18.
+const BAR_BOTTOM = 26;
+const BAR_H = 18;
+const BAR_TOP = HEIGHT - BAR_BOTTOM - BAR_H; // 236
+
 function emailLineCount(emailId: string): 1 | 2 {
   return measureWidth(`${emailId}${EMAIL_DOMAIN}`, "400 21px 'Red Hat Display', sans-serif") >
     WIDTH - C_LEFT - 20
@@ -50,25 +56,29 @@ type Slices = {
   phone: Rect;
   email: Rect;
   web: Rect;
-  bottom: Rect;
+  aboveBar: Rect; // 연락처 밴드 아래 ~ 띠 위 (ETRIBE 상부)
+  bar: Rect; // 검정 띠(주소/전화/팩스) → tel 링크
+  belowBar: Rect; // 띠 아래 (ETRIBE 하부)
   contactH: number;
-  bottomH: number;
+  aboveBarH: number;
 };
 
-// 카드를 6조각으로 분할 (1x 좌표). 연락처(전화/이메일/홈피)만 클릭 셀.
+// 카드를 8조각으로 분할 (1x 좌표). 연락처 3줄 + 띠(전화)만 클릭 셀.
 function computeSlices(lines: number): Slices {
   const contactH = LINE_H * (2 + lines); // phone + email(lines) + web
   const bottomTop = C_TOP + contactH;
-  const bottomH = HEIGHT - bottomTop;
+  const aboveBarH = BAR_TOP - bottomTop;
   return {
     top: [0, 0, WIDTH, C_TOP],
     midleft: [0, C_TOP, C_LEFT, contactH],
     phone: [C_LEFT, C_TOP, C_RIGHT_W, LINE_H],
     email: [C_LEFT, C_TOP + LINE_H, C_RIGHT_W, LINE_H * lines],
     web: [C_LEFT, C_TOP + LINE_H + LINE_H * lines, C_RIGHT_W, LINE_H],
-    bottom: [0, bottomTop, WIDTH, bottomH],
+    aboveBar: [0, bottomTop, WIDTH, aboveBarH],
+    bar: [0, BAR_TOP, WIDTH, BAR_H],
+    belowBar: [0, BAR_TOP + BAR_H, WIDTH, HEIGHT - (BAR_TOP + BAR_H)],
     contactH,
-    bottomH,
+    aboveBarH,
   };
 }
 
@@ -142,6 +152,7 @@ export function Editor({ initial }: { initial: Card }) {
   const mailHref = `mailto:${emailId}${EMAIL_DOMAIN}`;
   const cTelHref = toTelHref(committed.phone);
   const cMailHref = `mailto:${committed.emailId}${EMAIL_DOMAIN}`;
+  const barTelHref = toTelHref(TEL); // 하단 띠 전화(02-844-0090)
 
   const liveLines = emailLineCount(emailId);
   const liveSlices = computeSlices(liveLines);
@@ -167,7 +178,9 @@ export function Editor({ initial }: { initial: Card }) {
       `      </td>`,
       `    </tr></table>`,
       `  </td></tr>`,
-      `  <tr><td>${img(liveSlices.bottom, WIDTH, liveSlices.bottomH, "")}</td></tr>`,
+      `  <tr><td>${img(liveSlices.aboveBar, WIDTH, liveSlices.aboveBarH, "")}</td></tr>`,
+      `  <tr><td><a href="${barTelHref}" style="display:block">${img(liveSlices.bar, WIDTH, BAR_H, "전화")}</a></td></tr>`,
+      `  <tr><td>${img(liveSlices.belowBar, WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
       `</table>`,
     ].join("\n");
   }
@@ -254,7 +267,7 @@ export function Editor({ initial }: { initial: Card }) {
         <div style={{ fontSize: 12, color: "#9ca3af", fontFamily: "monospace" }}>
           라이브(HTML) — {WIDTH * SCALE}×{HEIGHT * SCALE}px · 입력 시 즉시 반영
         </div>
-        <div style={{ width: WIDTH * SCALE, height: HEIGHT * SCALE, outline: "1px solid #374151" }}>
+        <div style={{ width: WIDTH * SCALE, height: HEIGHT * SCALE }}>
           <CardView card={card} scale={SCALE} />
         </div>
 
@@ -279,7 +292,7 @@ export function Editor({ initial }: { initial: Card }) {
         <table
           cellPadding={0}
           cellSpacing={0}
-          style={{ borderCollapse: "collapse", lineHeight: 0, outline: "1px solid #374151" }}
+          style={{ borderCollapse: "collapse", lineHeight: 0 }}
         >
           <tbody>
             <tr>
@@ -325,7 +338,25 @@ export function Editor({ initial }: { initial: Card }) {
             </tr>
             <tr>
               <td>
-                <img src={cu(cSlices.bottom)} width={WIDTH} height={cSlices.bottomH} alt="" style={{ display: "block" }} />
+                <img src={cu(cSlices.aboveBar)} width={WIDTH} height={cSlices.aboveBarH} alt="" style={{ display: "block" }} />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href={barTelHref} style={{ display: "block" }}>
+                  <img src={cu(cSlices.bar)} width={WIDTH} height={BAR_H} alt="전화" style={{ display: "block" }} />
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <img
+                  src={cu(cSlices.belowBar)}
+                  width={WIDTH}
+                  height={HEIGHT - (BAR_TOP + BAR_H)}
+                  alt=""
+                  style={{ display: "block" }}
+                />
               </td>
             </tr>
           </tbody>

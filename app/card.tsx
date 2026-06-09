@@ -30,7 +30,7 @@ const BRAND = "ETRIBE";
 const WEB = "www.etribe.co.kr";
 export const EMAIL_DOMAIN = "@etribe.co.kr";
 const ADDRESS = "서울 마포구 월드컵북로 4길 81 2,3F";
-const TEL = "T. 02. 844. 0083";
+export const TEL = "T. 02. 844. 0090"; // 검정 띠 전화(서명에서 tel 링크로 사용)
 const FAX = "F. 02. 844. 0084";
 
 // 전화번호 "." 뒤 공백 강제: 점 주변 공백을 ". " 한 칸으로 정규화.
@@ -55,6 +55,11 @@ export const FONT_SPECS: { family: string; url: string; weight: 400 | 600 | 700 
     family: "Red Hat Display",
     url: `${RHD}/red-hat-display-latin-600-normal.woff`,
     weight: 600,
+  },
+  {
+    family: "Red Hat Display",
+    url: `${RHD}/red-hat-display-latin-700-normal.woff`,
+    weight: 700,
   },
 ];
 
@@ -156,7 +161,7 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
             position: "absolute",
             left: 0,
             right: 0,
-            bottom: 27,
+            bottom: 26,
             height: 18,
             backgroundColor: "#000000",
             display: "flex",
@@ -183,7 +188,7 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
               display: "flex",
               color: RED,
               fontSize: 12,
-              fontWeight: 600,
+              fontWeight: 700,
               lineHeight: 1,
               whiteSpace: "nowrap",
             }}
@@ -195,7 +200,7 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
               display: "flex",
               color: RED,
               fontSize: 12,
-              fontWeight: 600,
+              fontWeight: 700,
               lineHeight: 1,
               whiteSpace: "nowrap",
             }}
