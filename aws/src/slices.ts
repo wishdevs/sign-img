@@ -78,24 +78,25 @@ export function buildSignatureHtml(opts: {
   const barTel = toTelHref(TEL);
   const RW = C_RIGHT_W;
   const img = (key: SliceKey, w: number, h: number, alt: string) =>
-    `<img src="${attr(url(key))}" width="${w}" height="${h}" border="0" style="display:block;border:0" alt="${attr(alt)}" />`;
+    `<img src="${attr(url(key))}" width="${w}" height="${h}" border="0" style="display:block;border:0;vertical-align:top" alt="${attr(alt)}" />`;
   const T = "border-collapse:collapse;line-height:0";
+  const TD = "font-size:0;line-height:0;padding:0"; // Outlook 이미지 틈 방지
   return [
     `<table cellpadding="0" cellspacing="0" border="0" style="${T}">`,
-    `  <tr><td>${img("top", WIDTH, C_TOP, "")}</td></tr>`,
-    `  <tr><td>`,
+    `  <tr><td style="${TD}">${img("top", WIDTH, C_TOP, "")}</td></tr>`,
+    `  <tr><td style="${TD}">`,
     `    <table cellpadding="0" cellspacing="0" border="0" style="${T}"><tr>`,
-    `      <td>${img("midleft", C_LEFT, slices.contactH, "")}</td>`,
-    `      <td>`,
+    `      <td style="${TD}">${img("midleft", C_LEFT, slices.contactH, "")}</td>`,
+    `      <td style="${TD}">`,
     `        <a href="${attr(telHref)}" style="display:block">${img("phone", RW, LINE_H, "전화")}</a>`,
     `        <a href="${attr(mailHref)}" style="display:block">${img("email", RW, LINE_H * lines, "이메일")}</a>`,
     `        <a href="${attr(WEB_HREF)}" target="_blank" style="display:block">${img("web", RW, LINE_H, "홈페이지")}</a>`,
     `      </td>`,
     `    </tr></table>`,
     `  </td></tr>`,
-    `  <tr><td>${img("aboveBar", WIDTH, slices.aboveBarH, "")}</td></tr>`,
-    `  <tr><td><a href="${attr(barTel)}" style="display:block">${img("bar", WIDTH, BAR_H, "전화")}</a></td></tr>`,
-    `  <tr><td>${img("belowBar", WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
+    `  <tr><td style="${TD}">${img("aboveBar", WIDTH, slices.aboveBarH, "")}</td></tr>`,
+    `  <tr><td style="${TD}"><a href="${attr(barTel)}" style="display:block">${img("bar", WIDTH, BAR_H, "전화")}</a></td></tr>`,
+    `  <tr><td style="${TD}">${img("belowBar", WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
     `</table>`,
   ].join("\n");
 }

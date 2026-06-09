@@ -207,25 +207,26 @@ export function Editor({ initial }: { initial: Card }) {
     const srcOf = (key: string, r: Rect) =>
       CDN_BASE && hash ? `${CDN_BASE}/${hash}/${key}.png` : absSliceSrc(origin, d, r);
     const img = (key: string, r: Rect, w: number, h: number, alt: string) =>
-      `<img src="${attr(srcOf(key, r))}" width="${w}" height="${h}" border="0" style="display:block;border:0" alt="${attr(alt)}" />`;
+      `<img src="${attr(srcOf(key, r))}" width="${w}" height="${h}" border="0" style="display:block;border:0;vertical-align:top" alt="${attr(alt)}" />`;
     const RW = C_RIGHT_W;
     const T = `border-collapse:collapse;line-height:0`;
+    const TD = `font-size:0;line-height:0;padding:0`; // Outlook 이미지 틈 방지
     return [
       `<table cellpadding="0" cellspacing="0" border="0" style="${T}">`,
-      `  <tr><td>${img("top", liveSlices.top, WIDTH, C_TOP, "")}</td></tr>`,
-      `  <tr><td>`,
+      `  <tr><td style="${TD}">${img("top", liveSlices.top, WIDTH, C_TOP, "")}</td></tr>`,
+      `  <tr><td style="${TD}">`,
       `    <table cellpadding="0" cellspacing="0" border="0" style="${T}"><tr>`,
-      `      <td>${img("midleft", liveSlices.midleft, C_LEFT, liveSlices.contactH, "")}</td>`,
-      `      <td>`,
+      `      <td style="${TD}">${img("midleft", liveSlices.midleft, C_LEFT, liveSlices.contactH, "")}</td>`,
+      `      <td style="${TD}">`,
       `        <a href="${attr(telHref)}" style="display:block">${img("phone", liveSlices.phone, RW, LINE_H, "전화")}</a>`,
       `        <a href="${attr(mailHref)}" style="display:block">${img("email", liveSlices.email, RW, LINE_H * liveLines, "이메일")}</a>`,
       `        <a href="${attr(webHref)}" target="_blank" style="display:block">${img("web", liveSlices.web, RW, LINE_H, "홈페이지")}</a>`,
       `      </td>`,
       `    </tr></table>`,
       `  </td></tr>`,
-      `  <tr><td>${img("aboveBar", liveSlices.aboveBar, WIDTH, liveSlices.aboveBarH, "")}</td></tr>`,
-      `  <tr><td><a href="${attr(barTelHref)}" style="display:block">${img("bar", liveSlices.bar, WIDTH, BAR_H, "전화")}</a></td></tr>`,
-      `  <tr><td>${img("belowBar", liveSlices.belowBar, WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
+      `  <tr><td style="${TD}">${img("aboveBar", liveSlices.aboveBar, WIDTH, liveSlices.aboveBarH, "")}</td></tr>`,
+      `  <tr><td style="${TD}"><a href="${attr(barTelHref)}" style="display:block">${img("bar", liveSlices.bar, WIDTH, BAR_H, "전화")}</a></td></tr>`,
+      `  <tr><td style="${TD}">${img("belowBar", liveSlices.belowBar, WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
       `</table>`,
     ].join("\n");
   }
