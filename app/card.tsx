@@ -38,6 +38,19 @@ export function normalizePhone(s: string): string {
   return s.replace(/\s*\.\s*/g, ". ").trim();
 }
 
+// 이메일 줄 배치 — 글자수 기준(이미지/HTML/슬라이스 모두 동일 판단 위해 측정 대신 글자수).
+// 짧으면 1줄, 길면 3줄: 아이디 / @etribe. / co.kr
+// Red Hat Display 21px는 ~10.3px/자, 252px에 약 24자까지 들어감(23자=242px, 25자=255px).
+const EMAIL_ONE_LINE_MAX = 24; // 전체 글자수가 이 이하면 한 줄
+export function emailLineCount(emailId: string): number {
+  return emailId.length + EMAIL_DOMAIN.length <= EMAIL_ONE_LINE_MAX ? 1 : 3;
+}
+export function emailLayout(emailId: string): string[] {
+  return emailLineCount(emailId) === 1
+    ? [`${emailId}${EMAIL_DOMAIN}`]
+    : [emailId, "@etribe.", "co.kr"];
+}
+
 // 이름 700 / 주소 600 = Pretendard GOV, 영문·연락처 400 / 전화·팩스 600 = Red Hat Display.
 const GOV =
   "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/packages/pretendard-gov/dist/web/static/woff";
@@ -298,20 +311,21 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
           >
             {phoneText}
           </div>
-          {/* 이메일 — flex-wrap: 길면 @etribe.co.kr이 통째로 다음 줄(아이디는 필요시 break-word) */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              color: "#ffffff",
-              fontSize: 21,
-              fontWeight: 400,
-              lineHeight: 28 / 21,
-            }}
-          >
-            <span style={{ wordBreak: "break-word" }}>{card.emailId}</span>
-            <span style={{ whiteSpace: "nowrap" }}>{EMAIL_DOMAIN}</span>
-          </div>
+          {/* 이메일 — 글자수 기준 1줄 또는 3줄(아이디 / @etribe. / co.kr). 각 줄 28px */}
+          {emailLayout(card.emailId).map((ln, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                color: "#ffffff",
+                fontSize: 21,
+                fontWeight: 400,
+                lineHeight: 28 / 21,
+              }}
+            >
+              {ln}
+            </div>
+          ))}
           {/* 웹(고정) */}
           <div
             style={{

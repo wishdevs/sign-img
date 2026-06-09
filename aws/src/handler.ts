@@ -3,11 +3,10 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
-import { decodeCard, type Card } from "../../app/card";
+import { decodeCard, emailLineCount, type Card } from "../../app/card";
 import { renderFull, cropPng } from "./render";
 import {
   computeSlices,
-  estimateEmailLines,
   buildSignatureHtml,
   toTelHref,
   SLICE_KEYS,
@@ -57,7 +56,7 @@ export const handler = async (
       const d: string | undefined = body.d;
       if (!d) return json(400, { error: "missing d" });
       const card = decodeCard(d);
-      const lines = Number(body.lines) === 2 ? 2 : estimateEmailLines(card.emailId);
+      const lines = emailLineCount(card.emailId); // 글자수 기준(편집기와 동일)
 
       const base = `${hashKey(d)}`;
       const slices = computeSlices(lines);

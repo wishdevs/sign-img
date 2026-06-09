@@ -1,6 +1,6 @@
 // 슬라이스 좌표 계산 + 서명 table HTML 생성.
 // (app/preview/editor.tsx의 computeSlices/buildTableHtml 로직을 서버용으로 포팅)
-import { WIDTH, HEIGHT, EMAIL_DOMAIN, TEL } from "../../app/card";
+import { WIDTH, HEIGHT, TEL } from "../../app/card";
 
 // 레이아웃 상수(1x) — editor.tsx와 동일하게 유지.
 const C_TOP = 52;
@@ -23,14 +23,6 @@ export type SliceKey =
   | "belowBar";
 
 export type Slices = Record<SliceKey, Rect> & { contactH: number; aboveBarH: number };
-
-// 이메일 줄 수(1|2). 정밀 측정은 폰트 메트릭 필요 → 프론트에서 넘기는 값을 우선 사용.
-// fallback: 글자수 기반 근사(여유 있게).
-export function estimateEmailLines(emailId: string): 1 | 2 {
-  const full = `${emailId}${EMAIL_DOMAIN}`;
-  // 21px Red Hat Display 기준 글자폭 ~11px, 가용폭 252.
-  return full.length * 11 > C_RIGHT_W - 20 ? 2 : 1;
-}
 
 export function computeSlices(lines: number): Slices {
   const contactH = LINE_H * (2 + lines);

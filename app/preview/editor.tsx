@@ -9,6 +9,7 @@ import {
   EMAIL_DOMAIN,
   TEL,
   normalizePhone,
+  emailLineCount,
   type Card,
 } from "../card";
 
@@ -21,16 +22,6 @@ function encodeD(card: Card): string {
     .replace(/=+$/, "");
 }
 
-// 클라이언트 텍스트 폭 측정(이메일 줄 수 판단용).
-let _measureCtx: CanvasRenderingContext2D | null = null;
-function measureWidth(text: string, font: string): number {
-  if (typeof document === "undefined") return 0;
-  if (!_measureCtx) _measureCtx = document.createElement("canvas").getContext("2d");
-  if (!_measureCtx) return 0;
-  _measureCtx.font = font;
-  return _measureCtx.measureText(text).width;
-}
-
 // 연락처 레이아웃(1x): 좌 208 / 상 52 / 우폭 272 / 줄높이 28.
 const C_TOP = 52;
 const C_LEFT = 208;
@@ -41,13 +32,6 @@ const LINE_H = 28;
 const BAR_BOTTOM = 26;
 const BAR_H = 18;
 const BAR_TOP = HEIGHT - BAR_BOTTOM - BAR_H; // 236
-
-function emailLineCount(emailId: string): 1 | 2 {
-  return measureWidth(`${emailId}${EMAIL_DOMAIN}`, "400 21px 'Red Hat Display', sans-serif") >
-    WIDTH - C_LEFT - 20
-    ? 2
-    : 1;
-}
 
 type Rect = [number, number, number, number];
 type Slices = {
