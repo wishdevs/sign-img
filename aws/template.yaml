@@ -15,6 +15,14 @@ Parameters:
     Type: String
     Default: "arn:aws:acm:us-east-1:943789029542:certificate/41aa7478-603a-4c80-9a9b-d962b9c82af0"
     Description: "ACM 인증서 ARN (us-east-1)."
+  BasicAuthB64:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: "프리뷰 Basic Auth — base64('아이디:비밀번호'). 비우면 인증 없음."
+
+Conditions:
+  HasBasicAuth: !Not [!Equals [!Ref BasicAuthB64, ""]]
 
 Globals:
   Function:
@@ -113,6 +121,31 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
+  # 프리뷰 Basic Auth (CloudFront Function, viewer-request)
+  BasicAuthFn:
+    Type: AWS::CloudFront::Function
+    Condition: HasBasicAuth
+    Properties:
+      Name: !Sub "${AWS::StackName}-basicauth"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: "Preview basic auth"
+        Runtime: cloudfront-js-2.0
+      FunctionCode: !Sub |
+        function handler(event) {
+          var req = event.request;
+          var h = req.headers;
+          var expected = "Basic ${BasicAuthB64}";
+          if (!h.authorization || h.authorization.value !== expected) {
+            return {
+              statusCode: 401,
+              statusDescription: "Unauthorized",
+              headers: { "www-authenticate": { value: "Basic realm=\"sign\"" } }
+            };
+          }
+          return req;
+        }
+
   WebDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -124,6 +157,11 @@ Resources:
           ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled (HTML 즉시 반영)
           AllowedMethods: [GET, HEAD]
+          FunctionAssociations: !If
+            - HasBasicAuth
+            - - EventType: viewer-request
+                FunctionARN: !GetAtt BasicAuthFn.FunctionMetadata.FunctionARN
+            - !Ref AWS::NoValue
         Origins:
           - Id: web
             DomainName: !GetAtt WebBucket.RegionalDomainName

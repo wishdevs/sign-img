@@ -298,8 +298,8 @@ export function Editor({ initial }: { initial: Card }) {
             <span>부서명에 가운뎃점이 필요하면 복사해서 사용하세요:</span>
             <button
               type="button"
-              onClick={() => navigator.clipboard?.writeText("·")}
-              title="가운뎃점(·) 복사"
+              onClick={() => navigator.clipboard?.writeText(" ·")}
+              title="가운뎃점(앞 공백 포함 &quot; ·&quot;) 복사"
               style={{ ...btnStyle, padding: "2px 10px", fontSize: 14 }}
             >
               · 복사
