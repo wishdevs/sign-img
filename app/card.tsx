@@ -104,10 +104,9 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
     .split("")
     .filter((ch) => ch in GLYPHS);
 
-  // 연락처: 전화(점 뒤 공백 강제) · 이메일(도메인 고정, 길면 @ 앞에서 개행) · 웹(고정).
-  // \u200B(zero-width space)로 @etribe.co.kr 앞에만 개행 지점을 둔다.
-  const emailDisplay = `${card.emailId}\u200B${EMAIL_DOMAIN}`;
-  const contactLines = [normalizePhone(card.phone), emailDisplay, WEB];
+  // 이메일은 flex-wrap 세그먼트로 처리(길면 @etribe.co.kr 통째로 다음 줄).
+  // satori는 ZWSP 줄바꿈 미지원 → flex-wrap으로 브라우저와 동일하게.
+  const phoneText = normalizePhone(card.phone);
 
   return (
     <div
@@ -287,21 +286,44 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
             flexDirection: "column",
           }}
         >
-          {contactLines.map((line, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                color: "#ffffff",
-                fontSize: 21,
-                fontWeight: 400,
-                lineHeight: 28 / 21, // 각 줄 높이 28px
-                wordBreak: "normal", // ZWSP 지점(@ 앞)에서만 개행
-              }}
-            >
-              {line}
-            </div>
-          ))}
+          {/* 전화 */}
+          <div
+            style={{
+              display: "flex",
+              color: "#ffffff",
+              fontSize: 21,
+              fontWeight: 400,
+              lineHeight: 28 / 21,
+            }}
+          >
+            {phoneText}
+          </div>
+          {/* 이메일 — flex-wrap: 길면 @etribe.co.kr이 통째로 다음 줄(아이디는 필요시 break-word) */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              color: "#ffffff",
+              fontSize: 21,
+              fontWeight: 400,
+              lineHeight: 28 / 21,
+            }}
+          >
+            <span style={{ wordBreak: "break-word" }}>{card.emailId}</span>
+            <span style={{ whiteSpace: "nowrap" }}>{EMAIL_DOMAIN}</span>
+          </div>
+          {/* 웹(고정) */}
+          <div
+            style={{
+              display: "flex",
+              color: "#ffffff",
+              fontSize: 21,
+              fontWeight: 400,
+              lineHeight: 28 / 21,
+            }}
+          >
+            {WEB}
+          </div>
         </div>
       </div>
     </div>
