@@ -1,8 +1,14 @@
 /node_modules
+node_modules/
 /.next
 /out
 /.recycles
+aws/dist
+aws/.build
+aws/.aws-sam
 .env*.local
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts
+aws/web/config.js
+aws/web/app.js

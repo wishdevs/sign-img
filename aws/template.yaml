@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: ETRIBE 명함 이미지 생성/슬라이스 (Lambda + S3 + CloudFront)
+
+Parameters:
+  CdnBase:
+    Type: String
+    Default: "https://sign.etribe.co.kr"
+    Description: "이미지 공개 베이스 URL (서명 HTML이 이 도메인을 사용)."
+  ImageDomain:
+    Type: String
+    Default: "sign.etribe.co.kr"
+    Description: "이미지 CloudFront 커스텀 도메인."
+  CertificateArn:
+    Type: String
+    Default: "arn:aws:acm:us-east-1:943789029542:certificate/41aa7478-603a-4c80-9a9b-d962b9c82af0"
+    Description: "ACM 인증서 ARN (us-east-1)."
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Architectures: [arm64]
+    Runtime: nodejs22.x
+
+Resources:
+  ImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  GenerateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/
+      Handler: handler.handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ImagesBucket
+          CDN_BASE: !Ref CdnBase
+      # 최소 권한: 이미지 버킷에 Get(HeadObject 포함)·Put만. (Delete/List/ACL 없음)
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [s3:GetObject, s3:PutObject]
+              Resource: !Sub "${ImagesBucket.Arn}/*"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: ["*"]
+          AllowMethods: [GET, POST]
+          AllowHeaders: [content-type]
+
+  # CloudFront → S3 (OAC). 이미지 공개 서빙 + 캐시.
+  Oac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Aliases:
+          - !Ref ImageDomain
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        DefaultCacheBehavior:
+          TargetOriginId: s3
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+          AllowedMethods: [GET, HEAD]
+        Origins:
+          - Id: s3
+            DomainName: !GetAtt ImagesBucket.RegionalDomainName
+            OriginAccessControlId: !Ref Oac
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImagesBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${ImagesBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+
+  # ── 프리뷰(편집기) 정적 호스팅 — S3 + CloudFront(HTTPS, 클립보드 동작용) ──
+  WebBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  WebDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          TargetOriginId: web
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled (HTML 즉시 반영)
+          AllowedMethods: [GET, HEAD]
+        Origins:
+          - Id: web
+            DomainName: !GetAtt WebBucket.RegionalDomainName
+            OriginAccessControlId: !Ref Oac
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+
+  WebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${WebBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}"
+
+Outputs:
+  FunctionUrl:
+    Description: "Lambda Function URL (프론트가 POST /generate, 또는 GET ?d=)"
+    Value: !GetAtt GenerateFunctionUrl.FunctionUrl
+  CdnDomain:
+    Description: "이미지 CloudFront 도메인 (이미지 공개 URL 베이스). 커스텀 도메인 없으면 이걸 CDN_BASE로."
+    Value: !Sub "https://${Distribution.DomainName}"
+  WebUrl:
+    Description: "프리뷰(편집기) URL — 여기 접속해 Function URL 입력 후 사용"
+    Value: !Sub "https://${WebDistribution.DomainName}"
+  ImagesBucketName:
+    Value: !Ref ImagesBucket
+  WebBucketName:
+    Description: "프리뷰 정적파일 업로드 대상 (aws s3 sync web/ s3://<이값>/)"
+    Value: !Ref WebBucket

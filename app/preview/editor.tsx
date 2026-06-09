@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import {
   CardView,
   WIDTH,
@@ -119,8 +119,40 @@ function toTelHref(phone: string): string {
 }
 
 const rectStr = (r: Rect) => r.join(",");
+// 이미지(조각) 엔드포인트 베이스. Vercel=/slice, AWS=Lambda Function URL(window.__IMG_BASE__).
+const IMG_BASE =
+  (typeof window !== "undefined" && (window as { __IMG_BASE__?: string }).__IMG_BASE__) ||
+  "/slice";
 const sliceSrc = (dd: string, r: Rect, bust?: number) =>
-  `/slice?d=${dd}&crop=${rectStr(r)}${bust ? `&t=${bust}` : ""}`;
+  `${IMG_BASE}?d=${dd}&crop=${rectStr(r)}${bust ? `&t=${bust}` : ""}`;
+const absSliceSrc = (origin: string, dd: string, r: Rect) => {
+  const s = sliceSrc(dd, r);
+  return s.startsWith("http") ? s : origin + s;
+};
+// 전체 이미지 베이스. Vercel=/sign, AWS=Lambda(?d=, crop 없음).
+const FULL_BASE =
+  (typeof window !== "undefined" && (window as { __IMG_BASE__?: string }).__IMG_BASE__) ||
+  "/sign";
+const fullSrc = (dd: string) => `${FULL_BASE}?d=${dd}`;
+
+// 복사 서명용 CDN 베이스(있으면 서명 HTML이 결정적 URL 사용). AWS=https://sign.etribe.co.kr.
+const CDN_BASE =
+  (typeof window !== "undefined" && (window as { __CDN_BASE__?: string }).__CDN_BASE__) || "";
+
+// d의 sha256 앞 16hex (Lambda의 hashKey와 동일). S3 키 = {hash}/{slice}.png.
+async function hashKey(d: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(d));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
+// HTML 속성 컨텍스트 이스케이프 (복사 HTML 수동 빌드 시 XSS 방지).
+const attr = (s: string) =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
 export function Editor({ initial }: { initial: Card }) {
   const [nameKo, setNameKo] = useState(initial.nameKo);
@@ -159,35 +191,66 @@ export function Editor({ initial }: { initial: Card }) {
   const cLines = emailLineCount(committed.emailId);
   const cSlices = computeSlices(cLines);
 
-  // 복사용 서명 HTML(중첩 table). 절대 URL.
+  // CDN 모드(AWS)면 결정적 해시로 sign.etribe.co.kr URL 생성. d 바뀌면 재계산.
+  const [hash, setHash] = useState<string | null>(null);
+  useEffect(() => {
+    if (!CDN_BASE) return;
+    let alive = true;
+    hashKey(d).then((h) => alive && setHash(h));
+    return () => {
+      alive = false;
+    };
+  }, [d]);
+
+  // 복사용 서명 HTML(중첩 table). CDN_BASE 있으면 {CDN}/{hash}/{key}.png, 아니면 절대 슬라이스 URL.
   function buildTableHtml(): string {
-    const img = (r: Rect, w: number, h: number, alt: string) =>
-      `<img src="${origin}${sliceSrc(d, r)}" width="${w}" height="${h}" border="0" style="display:block;border:0" alt="${alt}" />`;
+    const srcOf = (key: string, r: Rect) =>
+      CDN_BASE && hash ? `${CDN_BASE}/${hash}/${key}.png` : absSliceSrc(origin, d, r);
+    const img = (key: string, r: Rect, w: number, h: number, alt: string) =>
+      `<img src="${attr(srcOf(key, r))}" width="${w}" height="${h}" border="0" style="display:block;border:0" alt="${attr(alt)}" />`;
     const RW = C_RIGHT_W;
     const T = `border-collapse:collapse;line-height:0`;
     return [
       `<table cellpadding="0" cellspacing="0" border="0" style="${T}">`,
-      `  <tr><td>${img(liveSlices.top, WIDTH, C_TOP, "")}</td></tr>`,
+      `  <tr><td>${img("top", liveSlices.top, WIDTH, C_TOP, "")}</td></tr>`,
       `  <tr><td>`,
       `    <table cellpadding="0" cellspacing="0" border="0" style="${T}"><tr>`,
-      `      <td>${img(liveSlices.midleft, C_LEFT, liveSlices.contactH, "")}</td>`,
+      `      <td>${img("midleft", liveSlices.midleft, C_LEFT, liveSlices.contactH, "")}</td>`,
       `      <td>`,
-      `        <a href="${telHref}" style="display:block">${img(liveSlices.phone, RW, LINE_H, "전화")}</a>`,
-      `        <a href="${mailHref}" style="display:block">${img(liveSlices.email, RW, LINE_H * liveLines, "이메일")}</a>`,
-      `        <a href="${webHref}" target="_blank" style="display:block">${img(liveSlices.web, RW, LINE_H, "홈페이지")}</a>`,
+      `        <a href="${attr(telHref)}" style="display:block">${img("phone", liveSlices.phone, RW, LINE_H, "전화")}</a>`,
+      `        <a href="${attr(mailHref)}" style="display:block">${img("email", liveSlices.email, RW, LINE_H * liveLines, "이메일")}</a>`,
+      `        <a href="${attr(webHref)}" target="_blank" style="display:block">${img("web", liveSlices.web, RW, LINE_H, "홈페이지")}</a>`,
       `      </td>`,
       `    </tr></table>`,
       `  </td></tr>`,
-      `  <tr><td>${img(liveSlices.aboveBar, WIDTH, liveSlices.aboveBarH, "")}</td></tr>`,
-      `  <tr><td><a href="${barTelHref}" style="display:block">${img(liveSlices.bar, WIDTH, BAR_H, "전화")}</a></td></tr>`,
-      `  <tr><td>${img(liveSlices.belowBar, WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
+      `  <tr><td>${img("aboveBar", liveSlices.aboveBar, WIDTH, liveSlices.aboveBarH, "")}</td></tr>`,
+      `  <tr><td><a href="${attr(barTelHref)}" style="display:block">${img("bar", liveSlices.bar, WIDTH, BAR_H, "전화")}</a></td></tr>`,
+      `  <tr><td>${img("belowBar", liveSlices.belowBar, WIDTH, HEIGHT - (BAR_TOP + BAR_H), "")}</td></tr>`,
       `</table>`,
     ].join("\n");
   }
   const liveTableHtml = buildTableHtml();
 
+  // AWS: window.__GEN_URL__(Lambda)이 있으면 복사 시 POST /generate로 S3에 실제 저장(멱등).
+  // 서명 HTML 자체는 이미 CDN(sign.etribe.co.kr) 결정적 URL이라 그대로 복사.
+  const genUrl =
+    (typeof window !== "undefined" && (window as { __GEN_URL__?: string }).__GEN_URL__) || "";
+
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
   async function copySignature() {
+    setBusy(true);
+    if (genUrl) {
+      try {
+        await fetch(genUrl, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ d, lines: liveLines }),
+        });
+      } catch {
+        /* 저장 실패해도 복사는 진행 */
+      }
+    }
     try {
       await navigator.clipboard.write([
         new ClipboardItem({
@@ -198,6 +261,7 @@ export function Editor({ initial }: { initial: Card }) {
     } catch {
       await navigator.clipboard?.writeText(liveTableHtml);
     }
+    setBusy(false);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -370,11 +434,12 @@ export function Editor({ initial }: { initial: Card }) {
           <button
             type="button"
             onClick={copySignature}
+            disabled={busy}
             style={{ ...btnStyle, background: "#2563eb", borderColor: "#2563eb", color: "#fff" }}
           >
-            {copied ? "✓ 복사됨" : "이메일 서명 HTML 복사"}
+            {busy ? "저장 중…" : copied ? "✓ 복사됨" : "이메일 서명 HTML 복사"}
           </button>
-          <a href={`/sign?d=${committedD}`} target="_blank" rel="noopener noreferrer" style={btnStyle}>
+          <a href={fullSrc(committedD)} target="_blank" rel="noopener noreferrer" style={btnStyle}>
             전체 이미지 새 탭 ↗
           </a>
         </div>
