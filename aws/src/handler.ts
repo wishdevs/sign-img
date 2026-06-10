@@ -56,7 +56,7 @@ export const handler = async (
       const d: string | undefined = body.d;
       if (!d) return json(400, { error: "missing d" });
       const card = decodeCard(d);
-      const lines = emailLineCount(card.emailId); // 글자수 기준(편집기와 동일)
+      const lines = emailLineCount(card.emailId); // 글자폭 테이블 기반(편집기와 동일·결정적)
 
       const base = `${hashKey(d)}`;
       const slices = computeSlices(lines);

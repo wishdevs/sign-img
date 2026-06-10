@@ -38,17 +38,54 @@ export function normalizePhone(s: string): string {
   return s.replace(/\s*\.\s*/g, ". ").trim();
 }
 
-// 이메일 줄 배치 — 글자수 기준(이미지/HTML/슬라이스 모두 동일 판단 위해 측정 대신 글자수).
-// 짧으면 1줄, 길면 3줄: 아이디 / @etribe. / co.kr
-// Red Hat Display 21px는 ~10.3px/자, 252px에 약 24자까지 들어감(23자=242px, 25자=255px).
-const EMAIL_ONE_LINE_MAX = 24; // 전체 글자수가 이 이하면 한 줄
-export function emailLineCount(emailId: string): number {
-  return emailId.length + EMAIL_DOMAIN.length <= EMAIL_ONE_LINE_MAX ? 1 : 3;
+// 이메일 줄바꿈 — Red Hat Display 21px 글자폭(px, 측정값)으로 그리디 계산.
+// 세그먼트 [아이디][@etribe.][co.kr]를 폭 252에 그리디로 채워 최대 2줄:
+//   덜 길면  id@etribe. / co.kr  (co.kr 떨어짐)
+//   더 길면  id / @etribe.co.kr  (@etribe.co.kr 떨어짐)
+// 측정값 기반이라 이미지/HTML/슬라이스가 동일 결과(글자수 추정의 오판 없음, flex 공백 없음).
+const EMAIL_W = 252;
+const SEG_AT = 75.81; // "@etribe."
+const SEG_CO = 45.15; // "co.kr"
+const CHAR_W: Record<string, number> = {
+  "0": 13.9, "1": 6.07, "2": 12.6, "3": 12.6, "4": 13, "5": 12.6, "6": 12.6, "7": 12.6,
+  "8": 12.6, "9": 12.85, a: 10.84, b: 12.39, c: 10.77, d: 12.39, e: 11.84, f: 7.85,
+  g: 12.31, h: 11.53, i: 4.2, j: 4.2, k: 10.37, l: 4.2, m: 18.04, n: 11.53, o: 12.43,
+  p: 12.39, q: 12.39, r: 7.27, s: 9.37, t: 7.66, u: 11.53, v: 10.77, w: 14.76, x: 10.31,
+  y: 10.71, z: 9.72, A: 14.26, B: 13.8, C: 15.16, D: 15.12, E: 12.94, F: 12.75, G: 16.55,
+  H: 15.01, I: 4.85, J: 12.6, K: 12.96, L: 12.68, M: 17.79, N: 15.22, O: 16.99, P: 13.59,
+  Q: 16.99, R: 13.54, S: 12.6, T: 12.96, U: 14.78, V: 14.26, W: 18.52, X: 13.4, Y: 13.42,
+  Z: 12.68, ".": 5.25, _: 10.12, "-": 9.39, "+": 12.6,
+};
+function strWidth(s: string): number {
+  let w = 0;
+  for (const ch of s) w += CHAR_W[ch] ?? 12; // 미지 글자 기본 12px
+  return w;
 }
-export function emailLayout(emailId: string): string[] {
-  return emailLineCount(emailId) === 1
-    ? [`${emailId}${EMAIL_DOMAIN}`]
-    : [emailId, "@etribe.", "co.kr"];
+// 이메일을 1~2줄 문자열 배열로 (그리디).
+export function emailLines(emailId: string): string[] {
+  const segs = [
+    { t: emailId, w: strWidth(emailId) },
+    { t: "@etribe.", w: SEG_AT },
+    { t: "co.kr", w: SEG_CO },
+  ];
+  const lines: string[] = [];
+  let cur = "";
+  let curW = 0;
+  for (const s of segs) {
+    if (cur === "" || curW + s.w <= EMAIL_W) {
+      cur += s.t;
+      curW += s.w;
+    } else {
+      lines.push(cur);
+      cur = s.t;
+      curW = s.w;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+export function emailLineCount(emailId: string): number {
+  return emailLines(emailId).length;
 }
 
 // 이름 700 / 주소 600 = Pretendard GOV, 영문·연락처 400 / 전화·팩스 600 = Red Hat Display.
@@ -311,8 +348,8 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
           >
             {phoneText}
           </div>
-          {/* 이메일 — 글자수 기준 1줄 또는 3줄(아이디 / @etribe. / co.kr). 각 줄 28px */}
-          {emailLayout(card.emailId).map((ln, i) => (
+          {/* 이메일 — 미리 계산한 줄(1~2)을 plain 텍스트로 렌더(공백/오판 없음). 각 줄 28px */}
+          {emailLines(card.emailId).map((ln, i) => (
             <div
               key={i}
               style={{
@@ -321,6 +358,7 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
                 fontSize: 21,
                 fontWeight: 400,
                 lineHeight: 28 / 21,
+                whiteSpace: "nowrap",
               }}
             >
               {ln}
