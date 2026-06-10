@@ -8,6 +8,7 @@ import {
   SCALE,
   EMAIL_DOMAIN,
   TEL,
+  ASSET_VERSION,
   normalizePhone,
   emailLineCount,
   type Card,
@@ -123,9 +124,9 @@ const fullSrc = (dd: string) => `${FULL_BASE}?d=${dd}`;
 const CDN_BASE =
   (typeof window !== "undefined" && (window as { __CDN_BASE__?: string }).__CDN_BASE__) || "";
 
-// d의 sha256 앞 16hex (Lambda의 hashKey와 동일). S3 키 = {hash}/{slice}.png.
+// 에셋버전+d의 sha256 앞 16hex (Lambda의 hashKey와 동일). S3 키 = {hash}/{slice}.png.
 async function hashKey(d: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(d));
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${ASSET_VERSION}:${d}`));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
 }
 

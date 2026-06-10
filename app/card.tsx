@@ -29,6 +29,8 @@ export const DEFAULT_CARD: Card = {
 const BRAND = "ETRIBE";
 const WEB = "www.etribe.co.kr";
 export const EMAIL_DOMAIN = "@etribe.co.kr";
+// 레이아웃/렌더 로직이 바뀌면 올려서 S3 캐시(hash 키)를 무효화한다.
+export const ASSET_VERSION = "v2";
 const ADDRESS = "서울 마포구 월드컵북로 4길 81 2,3F";
 export const TEL = "T. 02. 844. 0090"; // 검정 띠 전화(서명에서 tel 링크로 사용)
 const FAX = "F. 02. 844. 0084";

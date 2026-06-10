@@ -3,7 +3,7 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
-import { decodeCard, emailLineCount, type Card } from "../../app/card";
+import { decodeCard, emailLineCount, ASSET_VERSION, type Card } from "../../app/card";
 import { renderFull, cropPng } from "./render";
 import {
   computeSlices,
@@ -35,7 +35,8 @@ const json = (code: number, obj: unknown): APIGatewayProxyStructuredResultV2 => 
   body: JSON.stringify(obj),
 });
 
-const hashKey = (d: string) => createHash("sha256").update(d).digest("hex").slice(0, 16);
+const hashKey = (d: string) =>
+  createHash("sha256").update(`${ASSET_VERSION}:${d}`).digest("hex").slice(0, 16);
 const parseCrop = (raw?: string): Rect | null => {
   if (!raw) return null;
   const p = raw.split(",").map(Number);
