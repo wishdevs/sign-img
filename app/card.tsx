@@ -30,7 +30,7 @@ const BRAND = "ETRIBE";
 const WEB = "www.etribe.co.kr";
 export const EMAIL_DOMAIN = "@etribe.co.kr";
 // 레이아웃/렌더 로직이 바뀌면 올려서 S3 캐시(hash 키)를 무효화한다.
-export const ASSET_VERSION = "v2";
+export const ASSET_VERSION = "v3";
 const ADDRESS = "서울 마포구 월드컵북로 4길 81 2,3F";
 export const TEL = "T. 02. 844. 0090"; // 검정 띠 전화(서명에서 tel 링크로 사용)
 const FAX = "F. 02. 844. 0084";
@@ -88,6 +88,42 @@ export function emailLines(emailId: string): string[] {
 }
 export function emailLineCount(emailId: string): number {
   return emailLines(emailId).length;
+}
+
+// 영문이름·부서 줄바꿈 — 14px uppercase + letterSpacing 0.56 글자폭(측정값) 기반 단어 줄바꿈.
+export const EN_MAX_W = 168; // 최대 너비(연락처 left 208과 ~20px 간격)
+const EN_CHAR_W: Record<string, number> = {
+  "0": 9.83, "1": 4.61, "2": 8.96, "3": 8.96, "4": 9.23, "5": 8.96, "6": 8.96, "7": 8.96,
+  "8": 8.96, "9": 9.13, A: 10.07, B: 9.76, C: 10.67, D: 10.64, E: 9.18, F: 9.06, G: 11.59,
+  H: 10.57, I: 3.79, J: 8.96, K: 9.2, L: 9.02, M: 12.42, N: 10.71, O: 11.89, P: 9.62,
+  Q: 11.89, R: 9.59, S: 8.96, T: 9.2, U: 10.42, V: 10.07, W: 12.91, X: 9.49, Y: 9.51,
+  Z: 9.02, " ": 3.57, ".": 4.06, "-": 6.82, _: 7.31, "&": 9.7, "/": 6.96,
+};
+function strWidthEn(s: string): number {
+  let w = 0;
+  for (const ch of s.toUpperCase()) w += EN_CHAR_W[ch] ?? 10;
+  return w;
+}
+function wrapEnLine(line: string, maxW: number): string[] {
+  const words = line.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [""];
+  const out: string[] = [];
+  let cur = "";
+  for (const word of words) {
+    const test = cur ? `${cur} ${word}` : word;
+    if (cur === "" || strWidthEn(test) <= maxW) cur = test;
+    else {
+      out.push(cur);
+      cur = word;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+// \n 개행 유지 + 각 줄을 maxW에서 단어단위 줄바꿈.
+export function enLinesWrapped(enLines: string | string[], maxW = EN_MAX_W): string[] {
+  const raw = Array.isArray(enLines) ? enLines.join("\n") : enLines;
+  return raw.split("\n").flatMap((ln) => wrapEnLine(ln, maxW));
 }
 
 // 이름 700 / 주소 600 = Pretendard GOV, 영문·연락처 400 / 전화·팩스 600 = Red Hat Display.
@@ -307,23 +343,25 @@ export function CardView({ card, scale = 1 }: { card: Card; scale?: number }) {
               {card.titleKo}
             </div>
           </div>
-          {/* 영어이름·부서 — 한 요소에서 \n 개행, 간격은 lineHeight(19/14)로 / 이름 아래 12px */}
-          <div
-            style={{
-              display: "flex",
-              marginTop: 12,
-              color: "#ffffff",
-              fontSize: 14,
-              fontWeight: 400,
-              letterSpacing: 0.56,
-              lineHeight: 19 / 14, // 줄 높이 19px
-              textTransform: "uppercase",
-              whiteSpace: "pre-line",
-            }}
-          >
-            {Array.isArray(card.enLines)
-              ? card.enLines.join("\n")
-              : card.enLines}
+          {/* 영어이름·부서 — \n 개행 + 최대 너비(EN_MAX_W)에서 단어단위 줄바꿈(미리 계산). 이름 아래 12px */}
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 12, width: EN_MAX_W }}>
+            {enLinesWrapped(card.enLines).map((ln, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  color: "#ffffff",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  letterSpacing: 0.56,
+                  lineHeight: 19 / 14, // 줄 높이 19px
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {ln}
+              </div>
+            ))}
           </div>
         </div>
 
