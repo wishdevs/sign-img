@@ -30,7 +30,7 @@ const BRAND = "ETRIBE";
 const WEB = "www.etribe.co.kr";
 export const EMAIL_DOMAIN = "@etribe.co.kr";
 // 레이아웃/렌더 로직이 바뀌면 올려서 S3 캐시(hash 키)를 무효화한다.
-export const ASSET_VERSION = "v3";
+export const ASSET_VERSION = "v4";
 const ADDRESS = "서울 마포구 월드컵북로 4길 81 2,3F";
 export const TEL = "T. 02. 844. 0090"; // 검정 띠 전화(서명에서 tel 링크로 사용)
 const FAX = "F. 02. 844. 0084";
@@ -91,7 +91,7 @@ export function emailLineCount(emailId: string): number {
 }
 
 // 영문이름·부서 줄바꿈 — 14px uppercase + letterSpacing 0.56 글자폭(측정값) 기반 단어 줄바꿈.
-export const EN_MAX_W = 168; // 최대 너비(연락처 left 208과 ~20px 간격)
+export const EN_MAX_W = 175; // 최대 너비(연락처 left 208과 간격)
 const EN_CHAR_W: Record<string, number> = {
   "0": 9.83, "1": 4.61, "2": 8.96, "3": 8.96, "4": 9.23, "5": 8.96, "6": 8.96, "7": 8.96,
   "8": 8.96, "9": 9.13, A: 10.07, B: 9.76, C: 10.67, D: 10.64, E: 9.18, F: 9.06, G: 11.59,
